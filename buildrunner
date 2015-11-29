@@ -1,0 +1,61 @@
+#!/bin/bash
+
+mydir="$(dirname $0)"
+
+use_inotify=""
+if [ x"$1" = "x-i" ]; then
+    use_inotify=true
+    shift
+    if [ ! -x "`which inotifywait`" ]; then
+	echo "Error: No inotifywait program found (install inotify-tools?)" 1>&2
+	exit 2
+    fi
+fi
+
+if [ x"$1" = "x-h" -o x"$1" = "x-?" ]; then
+    echo "Usage: $0 [-i] [buildpager-args]" 1>&2
+    echo "With -i, use inotifywait instead of sleeping" 1>&2
+    exit 2
+fi
+
+m=""
+if [ -x "$mydir/m" ]; then
+    m="$mydir/m"
+elif [ -x "$(type -path m)" ]; then
+    m=m
+else
+    echo "Error: Required program m not found" 1>&2
+    exit 2
+fi
+
+tmpfile=/tmp/$$
+trap "rm -f $tmpfile" 0
+
+"$m" -x "$@"
+
+while true; do
+
+    echo -e "\r\033[34;47m(building...)\033[00m             "
+    if "$m" -x "$@" > "$tmpfile"; then
+	clear
+	echo
+	echo " ** Up-to-date in `pwd`"
+    else 
+	clear
+	tail -35 "$tmpfile"
+    fi
+
+    echo
+
+    if [ -n "$use_inotify" ]; then
+	echo -ne "\033[31;37m(watching...)\033[00m"
+	inotifywait $timeout_flags -e close_write -r . >/dev/null 2>&1
+    else 
+	echo -ne "\033[34;47m(q<RET> to quit) \033[00m"
+	read -t 5 x
+	if [ x"$x" = "xq" ]; then
+	    exit 0
+	fi
+    fi
+
+done

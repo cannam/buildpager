@@ -1,0 +1,88 @@
+#!/bin/bash
+
+warnings=""
+terminate=""
+
+# The -w flag means highlight warnings as well (though don't stop for them)
+if [ x"$1" = x-w ]; then warnings=yes; shift; fi
+
+# The -x flag means exit instead of waiting for user input after an error
+if [ x"$1" = x-x ]; then terminate=yes; shift; fi
+
+stty_f_option="-F"
+if stty "$stty_f_option" /dev/x 2>&1 | grep -q illegal; then
+    stty_f_option="-f"
+fi
+
+outcodefile=`mktemp /tmp/XXXXXX`
+trap "rm -f ${outcodefile} ; stty $stty_f_option /dev/tty cooked echo" 0
+
+getinput() {
+    if test -n "$terminate"; then
+	echo q
+    else
+	echo -ne "\033[1;31;37m--More--\033[00m" 1>&2
+	stty $stty_f_option /dev/tty raw -echo
+	c=`dd if=/dev/tty bs=1 count=1 2>/dev/null`
+	stty $stty_f_option /dev/tty cooked echo
+	echo -ne '\r        \r' 1>&2
+	echo $c
+    fi
+}
+
+is_error() {
+   line="$1"
+   if [[ "$line" =~ 'rror: ' ]] || [[ "$line" =~ 'rror- ' ]] || [[ "$line" =~ ': undefined ' ]]; then
+       return 0
+   elif [[ "$line" =~ :[0-9][0-9]*: ]]; then
+       ! [[ "$line" =~ arning ]] && ! [[ "$line" =~ from ]] && ! [[ "$line" =~ note ]]
+   else
+       return 1
+   fi
+}
+
+is_warning() {
+   [[ "$1" =~ 'arning: ' ]]
+}
+
+if [ -z "$MAKE" ]; then
+    if [ -f build.xml -a ! -f Makefile ]; then
+	MAKE=ant
+    elif gmake --version 2>/dev/null | grep GNU >/dev/null; then
+	MAKE=gmake
+    else
+	MAKE=make
+    fi
+fi
+( "$MAKE" "$@" 2>&1 ; echo $? > "${outcodefile}" ) | (
+    count=0
+    bad=""
+    runon=""
+    while IFS='' read line; do
+	if is_error "$line" ; then
+	    bad=yes
+	    b=${line##*:*[0-9][:.]}
+	    a=${line%${b}}
+	    line="\033[01;37;44m$a\033[00m$b"
+	elif [ -n "$warnings" ]; then
+            if is_warning "$line"; then
+                b=${line#*[: ][0-9]*:}
+                a=${line%${b}}
+                line="\033[01;37;44m$a\033[00m$b"
+	    fi
+        fi
+	echo -e "$line"
+	if [ -n "$bad" ] && [ -z "$runon" ]; then
+	    lines=`echo -e "$line" | fold | wc -l | awk '{ print $1 }'`
+	    [ -z "$lines" ] && lines=1
+	    count=$(($count+$lines))
+	    if [ "$count" -gt 24 ]; then
+		c=$(getinput)
+		case "$c" in q) exit 1;; c) runon=yes;; esac
+		count=0
+	    fi
+	fi
+    done )
+rv=1
+[ -f "${outcodefile}" ] && rv=`cat "${outcodefile}"`
+exit $rv
