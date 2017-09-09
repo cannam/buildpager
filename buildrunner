@@ -19,12 +19,12 @@ if [ x"$1" = "x-h" -o x"$1" = "x-?" ]; then
 fi
 
 m=""
-if [ -x "$mydir/m" ]; then
-    m="$mydir/m"
-elif [ -x "$(type -path m)" ]; then
-    m=m
+if [ -x "$mydir/buildpager" ]; then
+    m="$mydir/buildpager"
+elif [ -x "$(type -path buildpager)" ]; then
+    m=buildpager
 else
-    echo "Error: Required program m not found" 1>&2
+    echo "Error: Required program buildpager not found" 1>&2
     exit 2
 fi
 
