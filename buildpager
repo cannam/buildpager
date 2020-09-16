@@ -48,6 +48,8 @@ is_warning() {
 if [ -z "$MAKE" ]; then
     if [ -f build.xml -a ! -f Makefile ]; then
 	MAKE=ant
+    elif [ -f build.ninja -a ! -f Makefile ]; then
+	MAKE=ninja
     elif gmake --version 2>/dev/null | grep GNU >/dev/null; then
 	MAKE=gmake
     else
