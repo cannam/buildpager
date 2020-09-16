@@ -31,6 +31,14 @@ fi
 tmpfile=/tmp/$$
 trap "rm -f $tmpfile" 0
 
+watchdir=.
+
+if [ $(basename $PWD) = "build" ] && [ -f ./build.ninja ]; then
+    echo "Note: We appear to be in a build directory; watching parent directory" 1>&2
+    watchdir=..
+    sleep 2
+fi
+
 "$m" -x "$@"
 
 while true; do
@@ -49,7 +57,7 @@ while true; do
 
     if [ -n "$use_inotify" ]; then
 	echo -ne "\033[31;37m(watching...)\033[00m"
-	inotifywait $timeout_flags -e close_write -r . >/dev/null 2>&1
+	inotifywait $timeout_flags -e close_write -r "$watchdir" >/dev/null 2>&1
     else 
 	echo -ne "\033[34;47m(q<RET> to quit) \033[00m"
 	read -t 5 x
