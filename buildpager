@@ -45,6 +45,15 @@ is_warning() {
    [[ "$1" =~ 'arning: ' ]]
 }
 
+max_lines=24
+if [ -n "$LINES" ]; then
+    case "$LINES" in
+        ?) ;;
+        [123]?) ;;
+        *) max_lines=$(($LINES - 15));;
+    esac
+fi
+
 if [ -z "$MAKE" ]; then
     if [ -f build.xml -a ! -f Makefile ]; then
 	MAKE=ant
@@ -78,7 +87,7 @@ fi
 	    lines=`echo -e "$line" | fold | wc -l | awk '{ print $1 }'`
 	    [ -z "$lines" ] && lines=1
 	    count=$(($count+$lines))
-	    if [ "$count" -gt 24 ]; then
+	    if [ "$count" -gt "$max_lines" ]; then
 		c=$(getinput)
 		case "$c" in q) exit 1;; c) runon=yes;; esac
 		count=0
