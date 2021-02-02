@@ -45,7 +45,7 @@ is_warning() {
    [[ "$1" =~ 'arning: ' ]]
 }
 
-max_lines=24
+max_lines=24  # "after start of error", so not full terminal height
 if [ -n "$LINES" ]; then
     case "$LINES" in
         ?) ;;

@@ -41,6 +41,17 @@ if [ $(basename $PWD) = "build" ] && [ -f ./build.ninja ]; then
     sleep 1
 fi
 
+max_lines=30
+if [ -n "$LINES" ]; then
+    case "$LINES" in
+        ?) ;;
+        [123]?) ;;
+        *) max_lines=$(($LINES - 5));;
+    esac
+fi
+
+echo "max lines $max_lines"
+
 "$m" -x "$@"
 
 while true; do
@@ -52,7 +63,7 @@ while true; do
 	echo " ** Up-to-date in `pwd`"
     else 
 	clear
-	tail -35 "$tmpfile"
+	tail -"$max_lines" "$tmpfile"
     fi
 
     echo
