@@ -50,8 +50,6 @@ if [ -n "$LINES" ]; then
     esac
 fi
 
-echo "max lines $max_lines"
-
 "$m" -x "$@"
 
 while true; do
