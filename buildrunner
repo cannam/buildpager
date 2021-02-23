@@ -34,11 +34,15 @@ trap "rm -f $tmpfile" 0
 watch_dir=.
 omit_dir=
 
-if [ $(basename $PWD) = "build" ] && [ -f ./build.ninja ]; then
-    echo "Note: We appear to be in a build directory; watching parent directory" 1>&2
-    watch_dir=..
-    omit_dir=@../build
-    sleep 1
+if [ -f ./build.ninja ]; then
+    case $(basename $PWD) in
+        build*)
+            echo "Note: We appear to be in a build directory; watching parent directory" 1>&2
+            watch_dir=..
+            omit_dir=@../build
+            sleep 1;;
+        *);;
+    esac
 fi
 
 max_lines=30
