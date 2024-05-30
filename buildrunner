@@ -3,18 +3,23 @@
 mydir="$(dirname $0)"
 
 use_inotify=""
+use_fswatch=""
+
 if [ x"$1" = "x-i" ]; then
-    use_inotify=true
     shift
-    if [ ! -x "`which inotifywait`" ]; then
-	echo "Error: No inotifywait program found (install inotify-tools?)" 1>&2
+    if [ -x "`which inotifywait`" ]; then
+        use_inotify=true
+    elif [ -x "`which fswatch`" ]; then
+        use_fswatch=true
+    else
+	echo "Error: No inotifywait or fswatch program found (install inotify-tools or fswatch?)" 1>&2
 	exit 2
     fi
 fi
 
 if [ x"$1" = "x-h" -o x"$1" = "x-?" ]; then
     echo "Usage: $0 [-i] [buildpager-args]" 1>&2
-    echo "With -i, use inotifywait instead of sleeping" 1>&2
+    echo "With -i, use inotifywait or fswatch instead of sleeping" 1>&2
     exit 2
 fi
 
@@ -35,11 +40,12 @@ watch_dir=.
 omit_dir=
 
 if [ -f ./build.ninja ]; then
-    case $(basename $PWD) in
+    builddir=$(basename $PWD)
+    case "$builddir" in
         build*)
             echo "Note: We appear to be in a build directory; watching parent directory" 1>&2
             watch_dir=..
-            omit_dir=@../build
+            omit_dir=../"$builddir"
             sleep 1;;
         *);;
     esac
@@ -72,7 +78,10 @@ while true; do
 
     if [ -n "$use_inotify" ]; then
 	echo -ne "\033[31;37m(watching...)\033[00m"
-	inotifywait $timeout_flags -e close_write -r "$watch_dir" $omit_dir >/dev/null 2>&1
+	inotifywait -e close_write -r "$watch_dir" "@"$omit_dir >/dev/null 2>&1
+    elif [ -n "$use_fswatch" ]; then
+	echo -ne "\033[31;37m(watching...)\033[00m"
+	fswatch --one-event --recursive --exclude="$omit_dir" "$watch_dir" >/dev/null 2>&1
     else 
 	echo -ne "\033[34;47m(q<RET> to quit) \033[00m"
 	read -t 5 x
